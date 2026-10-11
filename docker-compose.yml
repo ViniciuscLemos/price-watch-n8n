@@ -1,0 +1,29 @@
+services:
+  api:
+    build: .
+    volumes:
+      - api-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+
+  n8n:
+    image: n8nio/n8n:1.64.0
+    ports:
+      - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+      - TZ=America/Sao_Paulo
+      # the workflow reads the webhook url from here, so it never ends up in the json
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./workflows:/workflows:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  api-data:
+  n8n-data:

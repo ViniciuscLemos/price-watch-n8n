@@ -1,0 +1,138 @@
+{
+  "id": "pricewatch000001",
+  "name": "Price watch (books.toscrape.com)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "nodes": [
+    {
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000001",
+      "name": "Every day at 9",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000002",
+      "name": "Run by hand",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000003",
+      "name": "Scrape and compare",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/check",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"pages\": 5 }",
+        "options": {
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000004",
+      "name": "Write the message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        100
+      ],
+      "parameters": {
+        "jsCode": "// Nothing changed -> return no items, so the next node doesn't run\nconst changes = $input.first().json.changes || [];\nif (!changes.length) return [];\n\nconst money = (n) => '£' + Number(n).toFixed(2);\nconst lines = changes.map((c) =>\n  c.kind === 'price_drop'\n    ? `Price drop: **${c.title}** ${money(c.old_price)} -> ${money(c.price)}\\n<${c.url}>`\n    : `Back in stock: **${c.title}** (${money(c.price)})\\n<${c.url}>`\n);\n\n// Discord messages max out at 2000 characters\nlet message = lines.join('\\n\\n');\nif (message.length > 1900) message = message.slice(0, 1900) + '\\n...';\nreturn [{ json: { message, count: changes.length } }];"
+      }
+    },
+    {
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000005",
+      "name": "Send to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.message }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Every day at 9": {
+      "main": [
+        [
+          {
+            "node": "Scrape and compare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run by hand": {
+      "main": [
+        [
+          {
+            "node": "Scrape and compare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape and compare": {
+      "main": [
+        [
+          {
+            "node": "Write the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the message": {
+      "main": [
+        [
+          {
+            "node": "Send to Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
