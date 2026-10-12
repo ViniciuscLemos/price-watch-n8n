@@ -1,0 +1,11 @@
+# Used only by the e2e job: swaps Discord for a local catcher.
+services:
+  catcher:
+    image: python:3.12-slim
+    command: python /ci/catcher.py
+    volumes:
+      - ./ci:/ci:ro
+      - ./ci-out:/out
+  n8n:
+    environment:
+      - DISCORD_WEBHOOK_URL=http://catcher:8080/
