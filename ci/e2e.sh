@@ -6,7 +6,8 @@ compose="docker compose -f docker-compose.yml -f ci/docker-compose.ci.yml"
 
 mkdir -p ci-out && chmod 777 ci-out
 $compose up -d --build --wait
-$compose exec -T n8n n8n import:workflow --input=/workflows/price-watch.json
+# --separate takes each file as one workflow (a plain --input wants an array)
+$compose exec -T n8n n8n import:workflow --separate --input=/workflows/
 
 $compose exec -T n8n n8n execute --id=pricewatch000001
 test ! -s ci-out/messages.txt || { echo "first run should not notify"; exit 1; }
