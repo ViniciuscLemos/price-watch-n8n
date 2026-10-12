@@ -44,3 +44,7 @@ def test_body_that_is_not_an_object(tmp_path):
     res = client(tmp_path).post("/check", json=[1, 2])
     assert res.status_code == 200
     assert res.get_json()["checked"] == 1
+
+
+def test_history_needs_a_url(tmp_path):
+    assert client(tmp_path).get("/history").status_code == 400

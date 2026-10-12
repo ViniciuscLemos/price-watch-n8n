@@ -41,6 +41,9 @@ def create_app(db_path: str | None = None, scrape=scraper.scrape) -> Flask:
     @app.get("/history")
     def history():
         url = request.args.get("url", "")
+        if not url:
+            # an empty list here looked like "never seen", which hid typos in the query
+            return {"error": "url is required"}, 400
         conn = store.connect(db_path)
         try:
             return jsonify(url=url, prices=store.history(conn, url))
