@@ -7,6 +7,8 @@ from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 BASE_URL = "https://books.toscrape.com/"
 HEADERS = {"User-Agent": "price-watch-n8n (study project)"}
@@ -50,9 +52,20 @@ def parse_list(html: str, page_url: str) -> tuple[list[Book], str | None]:
     return books, urljoin(page_url, nxt["href"]) if nxt else None
 
 
+def make_session() -> requests.Session:
+    # n8n calls /check once a day, so a single 503 or dropped connection would
+    # cost a whole day of history. Retry a few times with backoff instead.
+    retry = Retry(total=3, backoff_factor=1, status_forcelist=(429, 500, 502, 503, 504),
+                  allowed_methods=("GET",))
+    session = requests.Session()
+    session.mount("https://", HTTPAdapter(max_retries=retry))
+    session.mount("http://", HTTPAdapter(max_retries=retry))
+    return session
+
+
 def scrape(start_url: str = BASE_URL, max_pages: int = 3, delay: float = 0.5,
            session: requests.Session | None = None) -> list[Book]:
-    session = session or requests.Session()
+    session = session or make_session()
     books: list[Book] = []
     url: str | None = start_url
     for page in range(max_pages):

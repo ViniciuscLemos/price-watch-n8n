@@ -49,3 +49,9 @@ def test_scrape_follows_next_until_max_pages():
 
     session = FakeSession()
     assert len(scraper.scrape(PAGE_1, max_pages=1, delay=0, session=session)) == 2
+
+
+def test_default_session_retries_server_errors():
+    adapter = scraper.make_session().get_adapter(PAGE_1)
+    assert adapter.max_retries.total == 3
+    assert 503 in adapter.max_retries.status_forcelist
