@@ -61,5 +61,6 @@ flask --app price_watch.api run --port 8000
 
 - The webhook url is read from an env var (`$env.DISCORD_WEBHOOK_URL`) so it never ends up inside the exported workflow json. That needs `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, which is set in the compose file.
 - Tests run offline: the scraper is tested against trimmed copies of the site's html in `tests/fixtures`, and the JavaScript from the n8n Code node is pulled out of the workflow json and run with Node, so a typo there fails CI instead of failing at 9am.
+- CI also runs the whole thing end to end (`ci/e2e.sh`): docker compose brings up the api, n8n and a tiny server pretending to be Discord, imports the workflow and runs it twice with `n8n execute`. The first run only fills the database; then the demo script fakes older prices and the second run has to post a "Price drop" message.
 - I started with FastAPI but Windows Smart App Control blocks the pydantic-core dll on my PC, so I went with Flask, which is plenty for three routes.
 - SQLite instead of Postgres because it's one table of history for one person. If this grows, swapping is easy because all the SQL is in `price_watch/store.py`.
