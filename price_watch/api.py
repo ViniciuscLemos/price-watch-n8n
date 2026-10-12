@@ -17,9 +17,12 @@ def create_app(db_path: str | None = None, scrape=scraper.scrape) -> Flask:
 
     @app.post("/check")
     def check():
-        body = request.get_json(silent=True) or {}
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            # a json list or string here used to crash with a 500
+            body = {}
         start_url = body.get("url", scraper.BASE_URL)
-        if not start_url.startswith(scraper.BASE_URL):
+        if not isinstance(start_url, str) or not start_url.startswith(scraper.BASE_URL):
             # it's a public endpoint inside docker, so no scraping random sites
             return {"error": f"only {scraper.BASE_URL} is allowed"}, 400
         try:

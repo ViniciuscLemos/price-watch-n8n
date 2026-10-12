@@ -33,3 +33,14 @@ def test_check_refuses_other_sites(tmp_path):
 
 def test_bad_pages(tmp_path):
     assert client(tmp_path).post("/check", json={"pages": "lots"}).status_code == 400
+
+
+def test_url_that_is_not_a_string(tmp_path):
+    assert client(tmp_path).post("/check", json={"url": 123}).status_code == 400
+
+
+def test_body_that_is_not_an_object(tmp_path):
+    prices["x"] = 30.0
+    res = client(tmp_path).post("/check", json=[1, 2])
+    assert res.status_code == 200
+    assert res.get_json()["checked"] == 1
