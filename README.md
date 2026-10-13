@@ -31,6 +31,14 @@ flowchart LR
 
 Trying it by hand: the first check only fills the database, then two books get older prices and the next check reports them.
 
+Here's a real run in the n8n editor (taken in CI by `ci/shots`): every node went green and the message went out.
+
+![The workflow in the n8n editor after a run: every node has a green check and passed 1 item along](docs/n8n-run.png)
+
+The Code node turns the API's changes into one Discord message:
+
+![The "Write the message" node open in n8n: the changes from the API on the left, the JavaScript in the middle and the finished message on the right](docs/n8n-code-node.png)
+
 ![The API in a terminal: a first check, two faked older prices and a check that finds a price drop and a book back in stock](docs/api.png)
 
 ## Running it
