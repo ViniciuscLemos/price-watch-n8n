@@ -21,6 +21,10 @@ def make_changes(conn, how_many: int = 3, seed: int | None = None) -> list[int]:
         for appid in picked:
             # as if yesterday it cost 20% more (whole cents, the API never sends fractions)
             conn.execute("UPDATE games SET final = final * 6 / 5, lowest = final * 6 / 5 WHERE appid = ?", (appid,))
+            # and the history agrees, so the page draws the drop the next check finds
+            conn.execute(
+                "UPDATE price_history SET final = final * 6 / 5 WHERE rowid = "
+                "(SELECT MAX(rowid) FROM price_history WHERE appid = ?)", (appid,))
     return picked
 
 

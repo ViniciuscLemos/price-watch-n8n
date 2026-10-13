@@ -65,6 +65,7 @@ def test_demo_makes_the_next_check_find_deals():
     deals = store.record(conn, [price(1, 3299), price(2, 8899)], {})
     assert sorted((d["name"], d["old_price"], d["lowest"]) for d in deals) == [
         ("Hades II", 10678, True), ("Terraria", 3958, True)]
+    assert [h["price"] for h in store.history(conn, 2)] == [10678, 8899]
 
 
 def test_under_target_on_first_sight_is_a_deal_even_without_a_sale():
