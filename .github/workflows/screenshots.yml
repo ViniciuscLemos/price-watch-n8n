@@ -1,0 +1,22 @@
+name: screenshots
+
+# Run by hand when the workflow changes; the pictures come out as an artifact.
+on: workflow_dispatch
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.55.0 && npx playwright install --with-deps chromium
+      - run: bash ci/shots/run.sh
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots/
+      - if: failure()
+        run: docker compose -f docker-compose.yml -f ci/docker-compose.ci.yml logs
