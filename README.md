@@ -6,6 +6,8 @@ The scraping part is Python (requests + BeautifulSoup, same idea as my [webscrap
 
 The books come from [books.toscrape.com](https://books.toscrape.com), a site made for people to practice scraping, so I'm not hammering a real store.
 
+![The workflow in n8n: every day at 9 (or by hand) it calls the API, writes the message and sends it to Discord](docs/workflow.png)
+
 ## Why I built it
 
 I wanted to try n8n for real instead of just watching videos about it, and price alerts are the classic "I'd actually use this" automation. Splitting it this way also felt right: the scraping logic lives in code with tests, and n8n only handles the schedule and the notification, which is the part that changes the most (Discord today, email or Telegram tomorrow, just swap the last node).
@@ -26,6 +28,10 @@ flowchart LR
 - `POST /check` scrapes `pages` list pages (default 3, max 50), saves each book in SQLite and returns only the changes. A book seen for the first time isn't a change, otherwise the first run would send 100 messages.
 - `GET /history?url=...` returns every price a book had.
 - The API only accepts books.toscrape.com urls, since n8n can send anything to it.
+
+Trying it by hand: the first check only fills the database, then two books get older prices and the next check reports them.
+
+![The API in a terminal: a first check, two faked older prices and a check that finds a price drop and a book back in stock](docs/api.png)
 
 ## Running it
 
@@ -62,5 +68,7 @@ flask --app price_watch.api run --port 8000
 - The webhook url is read from an env var (`$env.DISCORD_WEBHOOK_URL`) so it never ends up inside the exported workflow json. That needs `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, which is set in the compose file.
 - Tests run offline: the scraper is tested against trimmed copies of the site's html in `tests/fixtures`, and the JavaScript from the n8n Code node is pulled out of the workflow json and run with Node, so a typo there fails CI instead of failing at 9am.
 - CI also runs the whole thing end to end (`ci/e2e.sh`): docker compose brings up the api, n8n and a tiny server pretending to be Discord, imports the workflow and runs it twice with `n8n execute`. The first run only fills the database; then the demo script fakes older prices and the second run has to post a "Price drop" message.
+
+![Part of the e2e job's log on GitHub Actions: the workflow runs twice and the fake Discord gets the message](docs/e2e.png)
 - I started with FastAPI but Windows Smart App Control blocks the pydantic-core dll on my PC, so I went with Flask, which is plenty for three routes.
 - SQLite instead of Postgres because it's one table of history for one person. If this grows, swapping is easy because all the SQL is in `price_watch/store.py`.
