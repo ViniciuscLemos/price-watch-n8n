@@ -1,21 +1,9 @@
 {
   "id": "pricewatch000001",
-  "name": "Price watch (books.toscrape.com)",
+  "name": "Steam deals watch",
   "active": false,
-  "settings": {
-    "executionOrder": "v1",
-    "timezone": "America/Sao_Paulo"
-  },
   "nodes": [
     {
-      "id": "b1f0c9a0-0001-4c1e-9a10-000000000001",
-      "name": "Every day at 9",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        0,
-        0
-      ],
       "parameters": {
         "rule": {
           "interval": [
@@ -24,9 +12,18 @@
             }
           ]
         }
-      }
+      },
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000001",
+      "name": "Every day at 9",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
     },
     {
+      "parameters": {},
       "id": "b1f0c9a0-0001-4c1e-9a10-000000000002",
       "name": "Run by hand",
       "type": "n8n-nodes-base.manualTrigger",
@@ -34,30 +31,29 @@
       "position": [
         0,
         200
-      ],
-      "parameters": {}
+      ]
     },
     {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/check",
+        "options": {
+          "timeout": 120000
+        }
+      },
       "id": "b1f0c9a0-0001-4c1e-9a10-000000000003",
-      "name": "Scrape and compare",
+      "name": "Check Steam prices",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         240,
         100
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://api:8000/check",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{ \"pages\": 5 }",
-        "options": {
-          "timeout": 120000
-        }
-      }
+      ]
     },
     {
+      "parameters": {
+        "jsCode": "// Nothing on sale -> return no items, so none of the senders run\nconst deals = $input.first().json.deals || [];\nif (!deals.length) return [];\n\nconst money = (cents, currency) =>\n  currency === 'BRL'\n    ? 'R$ ' + (cents / 100).toFixed(2).replace('.', ',')\n    : (cents / 100).toFixed(2) + ' ' + currency;\n\nconst describe = (d) => {\n  // on sale: compare with the full price; a plain price cut: with the last price seen\n  const was = d.discount > 0 ? d.full_price : d.old_price;\n  const off = d.discount > 0 ? `-${d.discount}%, ` : '';\n  const low = d.lowest ? ' Lowest since I started watching.' : '';\n  return `${money(d.price, d.currency)} (${off}was ${money(was, d.currency)}).${low}`;\n};\n\nconst title = deals.length === 1 ? `${deals[0].name} is on sale` : `${deals.length} games from the list are cheaper`;\nconst lines = deals.map((d) => `${d.name}: ${describe(d)}`);\n\n// Discord: one card per game with its banner, at most 10 per message\nconst discord = {\n  content: title,\n  embeds: deals.slice(0, 10).map((d) => ({\n    title: d.name,\n    url: d.url,\n    description: describe(d),\n    color: d.lowest ? 0x57f287 : 0x66c0f4,\n    image: d.image ? { url: d.image } : undefined,\n  })),\n};\n\n// phone push (ntfy): short, opens the best deal when tapped\nconst top = deals[0];\nconst push = {\n  title,\n  message: lines.join('\\n').slice(0, 3900),\n  click: top.url,\n  attach: top.image || undefined,\n  tags: ['video_game'],\n};\n\n// WhatsApp: plain text, *bold* names, links at the end of each line\nlet whatsapp = `*${title}*\\n\\n` + deals.map((d) => `*${d.name}* ${describe(d)}\\n${d.url}`).join('\\n\\n');\nif (whatsapp.length > 1500) whatsapp = whatsapp.slice(0, 1500) + '\\n...';\n\nreturn [{ json: { title, count: deals.length, discord, push, whatsapp } }];\n"
+      },
       "id": "b1f0c9a0-0001-4c1e-9a10-000000000004",
       "name": "Write the message",
       "type": "n8n-nodes-base.code",
@@ -65,28 +61,174 @@
       "position": [
         480,
         100
-      ],
-      "parameters": {
-        "jsCode": "// Nothing changed -> return no items, so the next node doesn't run\nconst changes = $input.first().json.changes || [];\nif (!changes.length) return [];\n\nconst money = (n) => '£' + Number(n).toFixed(2);\nconst lines = changes.map((c) =>\n  c.kind === 'price_drop'\n    ? `Price drop: **${c.title}** ${money(c.old_price)} -> ${money(c.price)}\\n<${c.url}>`\n    : `Back in stock: **${c.title}** (${money(c.price)})\\n<${c.url}>`\n);\n\n// Discord messages max out at 2000 characters\nlet message = lines.join('\\n\\n');\nif (message.length > 1900) message = message.slice(0, 1900) + '\\n...';\nreturn [{ json: { message, count: changes.length } }];"
-      }
+      ]
     },
     {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c0nd0000-0001-4c1e-9a10-000000000005",
+              "leftValue": "={{ $env.DISCORD_WEBHOOK_URL }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
       "id": "b1f0c9a0-0001-4c1e-9a10-000000000005",
-      "name": "Send to Discord",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Discord set?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c0nd0000-0001-4c1e-9a10-000000000006",
+              "leftValue": "={{ $env.NTFY_TOPIC }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000006",
+      "name": "Phone push set?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [
         720,
         100
-      ],
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c0nd0000-0001-4c1e-9a10-000000000007",
+              "leftValue": "={{ $env.WHATSAPP_PHONE }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000007",
+      "name": "WhatsApp set?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ content: $json.message }) }}",
+        "jsonBody": "={{ JSON.stringify($json.discord) }}",
         "options": {}
-      }
+      },
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000008",
+      "name": "Send to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NTFY_URL || 'https://ntfy.sh' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ...$json.push, topic: $env.NTFY_TOPIC }) }}",
+        "options": {}
+      },
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000009",
+      "name": "Push to my phone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.WHATSAPP_URL || 'https://api.callmebot.com/whatsapp.php' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $env.WHATSAPP_PHONE }}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $env.WHATSAPP_APIKEY }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.whatsapp }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1f0c9a0-0001-4c1e-9a10-000000000010",
+      "name": "Send on WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        300
+      ]
     }
   ],
   "connections": {
@@ -94,7 +236,7 @@
       "main": [
         [
           {
-            "node": "Scrape and compare",
+            "node": "Check Steam prices",
             "type": "main",
             "index": 0
           }
@@ -105,14 +247,14 @@
       "main": [
         [
           {
-            "node": "Scrape and compare",
+            "node": "Check Steam prices",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Scrape and compare": {
+    "Check Steam prices": {
       "main": [
         [
           {
@@ -127,12 +269,59 @@
       "main": [
         [
           {
+            "node": "Discord set?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Phone push set?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp set?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord set?": {
+      "main": [
+        [
+          {
             "node": "Send to Discord",
             "type": "main",
             "index": 0
           }
         ]
       ]
+    },
+    "Phone push set?": {
+      "main": [
+        [
+          {
+            "node": "Push to my phone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp set?": {
+      "main": [
+        [
+          {
+            "node": "Send on WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
   }
 }
