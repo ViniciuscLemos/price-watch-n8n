@@ -27,7 +27,10 @@ try {
   await page.waitForTimeout(800);
   await shot('workflow-run');
 
-  await page.getByText('Write the message').first().dblclick();
+  const node = page.locator('[data-name="Write the message"]').first();
+  if (await node.count()) await node.dblclick({ force: true });
+  else await page.mouse.dblclick(949, 395); // where the node sits after zoom to fit
+  await page.getByText(/output/i).first().waitFor();
   await page.waitForTimeout(1500);
   await shot('code-node');
 } catch (error) {
