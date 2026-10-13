@@ -1,65 +1,65 @@
 # price-watch-n8n
 
-A small automation that keeps an eye on book prices and tells me on Discord when something gets cheaper or comes back in stock.
+Tells me when a game I want on Steam goes on sale: on Discord, as a push notification on my phone or on WhatsApp.
 
-The scraping part is Python (requests + BeautifulSoup, same idea as my [webscraper-python](https://github.com/ViniciuscLemos/webscraper-python)), wrapped in a tiny Flask API. [n8n](https://n8n.io) does the "automation" part: it calls the API every morning, and if there's news it writes a message and posts it to a Discord webhook.
+Every morning [n8n](https://n8n.io) asks a small Python API for the prices of the games on my list. The API reads them from the Steam store (in R$), compares them with what it saw before and answers with the deals: games that got cheaper, the discount, and whether it's the lowest price since it started watching. n8n writes the message and sends it wherever I set it up.
 
-The books come from [books.toscrape.com](https://books.toscrape.com), a site made for people to practice scraping, so I'm not hammering a real store.
-
-![The workflow in n8n: every day at 9 (or by hand) it calls the API, writes the message and sends it to Discord](docs/workflow.png)
+![The workflow in the n8n editor after a run: every node green, the deals going out to Discord, the phone and WhatsApp](docs/n8n-run.png)
 
 ## Why I built it
 
-I wanted to try n8n for real instead of just watching videos about it, and price alerts are the classic "I'd actually use this" automation. Splitting it this way also felt right: the scraping logic lives in code with tests, and n8n only handles the schedule and the notification, which is the part that changes the most (Discord today, email or Telegram tomorrow, just swap the last node).
+I wanted to try n8n for real instead of just watching videos about it, and "tell me when this game is cheaper" is something I actually check by hand during every Steam sale. Splitting it this way also felt right: the price logic lives in code with tests, and n8n only handles the schedule and the notifications, which is the part that changes the most.
 
 ## How it works
 
 ```mermaid
 flowchart LR
     cron["n8n: every day at 9"] --> check["POST /check (Flask API)"]
-    check --> scrape["scrape list pages"]
-    scrape --> db[("SQLite: last price + history")]
-    db --> diff{"cheaper or back in stock?"}
+    check --> steam["Steam store prices (R$)"]
+    steam --> db[("SQLite: last price, lowest, history")]
+    db --> diff{"cheaper than last time?"}
     diff -- no --> stop["nothing happens"]
     diff -- yes --> msg["n8n Code node writes the message"]
-    msg --> discord["Discord webhook"]
+    msg --> discord["Discord"]
+    msg --> phone["push on the phone (ntfy)"]
+    msg --> wa["WhatsApp (CallMeBot)"]
 ```
 
-- `POST /check` scrapes `pages` list pages (default 3, max 50), saves each book in SQLite and returns only the changes. A book seen for the first time isn't a change, otherwise the first run would send 100 messages.
-- `GET /history?url=...` returns every price a book had.
-- The API only accepts books.toscrape.com urls, since n8n can send anything to it.
+- The games are in [`watchlist.json`](watchlist.json) (Elden Ring, Hollow Knight: Silksong, Baldur's Gate 3, RDR2...). Any Steam game works, the id is the number in the store url. n8n can also send its own list: `{"appids": [1245620, 1030300]}`.
+- `POST /check` gets every price in one call to the store's public `appdetails` endpoint (no key needed) and returns the deals, biggest discount first.
+- A game already on sale the first time it's seen is a deal. A sale that just goes on is not news again the next day, otherwise the same Terraria message would show up for two weeks.
+- "Lowest" means the lowest since the API started watching that game, not the lowest ever on Steam.
+- `GET /games` lists what it's watching with the current and lowest price, `GET /history?appid=...` every price a game had.
 
-Here's a real run in the n8n editor (taken in CI by `ci/shots`): every node went green and the message went out.
+The Code node turns the deals into three messages: Discord cards with the game's banner, a short push that opens the store page when tapped, and plain text for WhatsApp.
 
-![The workflow in the n8n editor after a run: every node has a green check and passed 1 item along](docs/n8n-run.png)
-
-The Code node turns the API's changes into one Discord message:
-
-![The "Write the message" node open in n8n: the changes from the API on the left, the JavaScript in the middle and the finished message on the right](docs/n8n-code-node.png)
-
-Trying the API by hand: the first check only fills the database, then two books get older prices and the next check reports them.
-
-![The API in a terminal: a first check, two faked older prices and a check that finds a price drop and a book back in stock](docs/api.png)
+![The "Write the message" node open in n8n: the deals from the API on the left, the JavaScript in the middle and the three messages on the right](docs/n8n-code-node.png)
 
 ## Running it
 
 You need Docker.
 
 ```bash
-cp .env.example .env   # paste your Discord webhook url in it
+cp .env.example .env   # fill in the channels you want, see below
 docker compose up -d --build
 docker compose exec n8n n8n import:workflow --input=/workflows/price-watch.json
 ```
 
-Then open http://localhost:5678, open "Price watch (books.toscrape.com)" and click "Test workflow". The first run only fills the database.
+Then open http://localhost:5678, open "Steam deals watch" and click "Test workflow". To leave it running every day, turn the workflow on (the "Active" toggle).
 
-The site never changes its prices (it's static), so to see an alert I fake a few old prices and run it again:
+Where the deals go (each one is used only if it's filled in `.env`):
+
+| Channel | What to set | How |
+| --- | --- | --- |
+| Discord | `DISCORD_WEBHOOK_URL` | Channel settings > Integrations > Webhooks > copy the url |
+| Phone push | `NTFY_TOPIC` | Install the [ntfy](https://ntfy.sh) app and subscribe to a topic name only you know. No account needed |
+| WhatsApp | `WHATSAPP_PHONE`, `WHATSAPP_APIKEY` | [CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/): send it the activation message once and it answers with your key. Free, for personal use |
+
+Waiting for a real sale to test it takes days, so this makes a few games look pricier "yesterday", and the next run reports them:
 
 ```bash
 docker compose exec api python -m price_watch.demo 4
 ```
-
-To leave it running every day, turn the workflow on (the "Active" toggle).
 
 ### Just the API, without Docker
 
@@ -73,10 +73,10 @@ flask --app price_watch.api run --port 8000
 
 ## Notes
 
-- The webhook url is read from an env var (`$env.DISCORD_WEBHOOK_URL`) so it never ends up inside the exported workflow json. That needs `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, which is set in the compose file.
-- Tests run offline: the scraper is tested against trimmed copies of the site's html in `tests/fixtures`, and the JavaScript from the n8n Code node is pulled out of the workflow json and run with Node, so a typo there fails CI instead of failing at 9am.
-- CI also runs the whole thing end to end (`ci/e2e.sh`): docker compose brings up the api, n8n and a tiny server pretending to be Discord, imports the workflow and runs it twice with `n8n execute`. The first run only fills the database; then the demo script fakes older prices and the second run has to post a "Price drop" message.
-
-![Part of the e2e job's log on GitHub Actions: the workflow runs twice and the fake Discord gets the message](docs/e2e.png)
-- I started with FastAPI but Windows Smart App Control blocks the pydantic-core dll on my PC, so I went with Flask, which is plenty for three routes.
-- SQLite instead of Postgres because it's one table of history for one person. If this grows, swapping is easy because all the SQL is in `price_watch/store.py`.
+- Webhook urls, the ntfy topic and the WhatsApp key are read from env vars (`$env.DISCORD_WEBHOOK_URL` and friends), so none of them ends up inside the exported workflow json. That needs `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, which is set in the compose file. Each sender sits behind an IF node that checks its setting, so the channels you don't use are just skipped.
+- Tests run offline: the Steam client is tested against real answers from the store saved in `tests/fixtures` (including the odd ones: a free game comes back with an empty list instead of an object), and the JavaScript from the n8n Code node is pulled out of the workflow json and run with Node, so a typo there fails CI instead of failing at 9am.
+- CI also runs the whole thing end to end (`ci/e2e.sh`): docker compose brings up the api, n8n and `ci/fakes.py`, a tiny server pretending to be the Steam store, Discord, ntfy and CallMeBot. It imports the workflow and runs it three times with `n8n execute`: the games already on sale have to reach all three channels, the same prices again must send nothing, and after the demo script fakes older prices the drops have to go out.
+- The screenshots above come from the same setup: `ci/shots` opens the editor with Playwright, clicks "Test workflow" and saves the pictures (the `screenshots` workflow in Actions, run by hand).
+- I started with FastAPI but Windows Smart App Control blocks the pydantic-core dll on my PC, so I went with Flask, which is plenty for four routes.
+- SQLite instead of Postgres because it's one table of games and one of history for one person. All the SQL is in `price_watch/store.py`, so swapping is easy.
+- The first version watched book prices on [books.toscrape.com](https://books.toscrape.com), a site made for scraping practice. It worked, but its prices never change, so it never had anything to say. Steam actually has sales.
