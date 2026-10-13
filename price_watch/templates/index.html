@@ -43,7 +43,7 @@
     <div>
       <a class="name" href="{{ g.url }}">{{ g.name }}</a>
       <div class="meta">
-        Lowest seen: {% if g.lowest == g.price %}<b>{{ g.lowest_text }} (now)</b>{% else %}{{ g.lowest_text }}{% endif %}
+        {% if g.history|length > 1 and g.lowest == g.price %}<b>Lowest since I started watching</b>{% else %}Lowest seen: {{ g.lowest_text }}{% endif %}
         {% if g.target_text %} · target {{ g.target_text }}{% endif %}
       </div>
       {{ g.sparkline|safe }}

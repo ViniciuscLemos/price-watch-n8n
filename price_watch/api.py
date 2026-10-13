@@ -135,10 +135,9 @@ def money(cents: int, currency: str) -> str:
 
 def sparkline(prices: list[int], width: int = 260, height: int = 30) -> str:
     """A tiny svg line of the price history; flat when it never changed."""
-    if not prices:
+    if len(prices) < 2:
+        # one price is not a line yet
         return ""
-    if len(prices) == 1:
-        prices = prices * 2
     low, high = min(prices), max(prices)
     span = (high - low) or 1
     step = width / (len(prices) - 1)
