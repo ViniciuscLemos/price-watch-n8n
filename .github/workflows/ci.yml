@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: 22
       - run: pip install -r requirements-dev.txt
+      - run: ruff check .
       - run: pytest -v
 
   docker:
