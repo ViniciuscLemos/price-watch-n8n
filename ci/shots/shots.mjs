@@ -38,7 +38,7 @@ try {
   const dashboard = await browser.newPage({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2 });
   await dashboard.goto('http://localhost:8000/');
   await dashboard.waitForLoadState('networkidle');
-  await dashboard.screenshot({ path: `${out}/dashboard.png`, fullPage: true });
+  await dashboard.screenshot({ path: `${out}/dashboard.png` });
 } catch (error) {
   await shot('error').catch(() => {});
   throw error;
