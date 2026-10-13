@@ -1,8 +1,12 @@
 services:
   api:
     build: .
+    environment:
+      - STEAM_COUNTRY=${STEAM_COUNTRY:-br}
     volumes:
       - api-data:/data
+      # edit the list without rebuilding
+      - ./watchlist.json:/app/watchlist.json:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -14,8 +18,12 @@ services:
     environment:
       - GENERIC_TIMEZONE=America/Sao_Paulo
       - TZ=America/Sao_Paulo
-      # the workflow reads the webhook url from here, so it never ends up in the json
+      # where the deals go: each one is used only when it's filled in, and none of
+      # them ends up inside the workflow json
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - NTFY_TOPIC=${NTFY_TOPIC:-}
+      - WHATSAPP_PHONE=${WHATSAPP_PHONE:-}
+      - WHATSAPP_APIKEY=${WHATSAPP_APIKEY:-}
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     volumes:
       - n8n-data:/home/node/.n8n

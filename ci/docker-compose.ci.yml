@@ -1,11 +1,27 @@
-# Used only by the e2e job: swaps Discord for a local catcher.
+# Used only by the CI jobs: swaps Steam and the three senders for ci/fakes.py.
 services:
-  catcher:
+  fakes:
     image: python:3.12-slim
-    command: python /ci/catcher.py
+    command: python /ci/fakes.py
     volumes:
       - ./ci:/ci:ro
+      - ./tests/fixtures:/fixtures:ro
+      - ./watchlist.json:/watchlist.json:ro
       - ./ci-out:/out
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 5s
+  api:
+    environment:
+      - STEAM_STORE_URL=http://fakes:8080
+    depends_on:
+      fakes:
+        condition: service_healthy
   n8n:
     environment:
-      - DISCORD_WEBHOOK_URL=http://catcher:8080/
+      - DISCORD_WEBHOOK_URL=http://fakes:8080/discord
+      - NTFY_URL=http://fakes:8080/ntfy
+      - NTFY_TOPIC=steam-deals-ci
+      - WHATSAPP_URL=http://fakes:8080/whatsapp.php
+      - WHATSAPP_PHONE=+5511900000000
+      - WHATSAPP_APIKEY=ci-only
