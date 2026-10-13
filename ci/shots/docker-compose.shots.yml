@@ -1,0 +1,8 @@
+# Only for the screenshots job: no survey, banners or update popups in the editor.
+services:
+  n8n:
+    environment:
+      - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_HIRING_BANNER_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false

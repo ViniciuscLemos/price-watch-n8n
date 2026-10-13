@@ -4,5 +4,5 @@ __pycache__/
 *.db
 .env
 ci-out/
-shots/
+/shots/
 node_modules/
