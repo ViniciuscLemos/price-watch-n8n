@@ -1,0 +1,204 @@
+{
+ "1245620": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 27450,
+    "final": 27450,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 274,50"
+   }
+  }
+ },
+ "1091500": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 19990,
+    "final": 19990,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 199,90"
+   }
+  }
+ },
+ "413150": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 2499,
+    "final": 2499,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 24,99"
+   }
+  }
+ },
+ "367520": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 4699,
+    "final": 4699,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 46,99"
+   }
+  }
+ },
+ "1086940": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 19999,
+    "final": 19999,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 199,99"
+   }
+  }
+ },
+ "1174180": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 29990,
+    "final": 7497,
+    "discount_percent": 75,
+    "initial_formatted": "R$ 299,90",
+    "final_formatted": "R$ 74,97"
+   }
+  }
+ },
+ "105600": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 3299,
+    "final": 1649,
+    "discount_percent": 50,
+    "initial_formatted": "R$ 32,99",
+    "final_formatted": "R$ 16,49"
+   }
+  }
+ },
+ "814380": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 27400,
+    "final": 13700,
+    "discount_percent": 50,
+    "initial_formatted": "R$ 274,00",
+    "final_formatted": "R$ 137,00"
+   }
+  }
+ },
+ "292030": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 15999,
+    "final": 15999,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 159,99"
+   }
+  }
+ },
+ "990080": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 24999,
+    "final": 24999,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 249,99"
+   }
+  }
+ },
+ "2050650": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 16900,
+    "final": 16900,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 169,00"
+   }
+  }
+ },
+ "1030300": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 5999,
+    "final": 5999,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 59,99"
+   }
+  }
+ },
+ "2246340": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 16900,
+    "final": 16900,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 169,00"
+   }
+  }
+ },
+ "1145350": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 8899,
+    "final": 8899,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 88,99"
+   }
+  }
+ },
+ "553850": {
+  "success": true,
+  "data": {
+   "price_overview": {
+    "currency": "BRL",
+    "initial": 19950,
+    "final": 19950,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "R$ 199,50"
+   }
+  }
+ },
+ "570": {
+  "success": true,
+  "data": []
+ },
+ "999999999": {
+  "success": false
+ }
+}

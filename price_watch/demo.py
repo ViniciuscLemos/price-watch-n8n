@@ -1,7 +1,7 @@
-"""Fakes some old prices in the database so the next /check has something to report.
+"""Makes some games look pricier in the database so the next /check has deals to report.
 
-books.toscrape.com never changes its prices (it's a static practice site), so
-without this the workflow would run forever and never send anything.
+Real sales come and go on their own, but waiting for one to test the workflow
+takes days, so this fakes "it was more expensive yesterday".
 
     python -m price_watch.demo [how_many]
 """
@@ -13,16 +13,14 @@ import sys
 from price_watch import store
 
 
-def make_changes(conn, how_many: int = 3, seed: int | None = None) -> list[str]:
+def make_changes(conn, how_many: int = 3, seed: int | None = None) -> list[int]:
     rng = random.Random(seed)
-    urls = [r["url"] for r in conn.execute("SELECT url FROM books")]
-    picked = rng.sample(urls, min(how_many, len(urls)))
+    appids = [r["appid"] for r in conn.execute("SELECT appid FROM games ORDER BY appid")]
+    picked = rng.sample(appids, min(how_many, len(appids)))
     with conn:
-        for i, url in enumerate(picked):
-            if i % 2 == 0:
-                conn.execute("UPDATE books SET price = ROUND(price + 5, 2) WHERE url = ?", (url,))
-            else:
-                conn.execute("UPDATE books SET in_stock = 0 WHERE url = ?", (url,))
+        for appid in picked:
+            # as if yesterday it cost 20% more (whole cents, the API never sends fractions)
+            conn.execute("UPDATE games SET final = final * 6 / 5, lowest = final * 6 / 5 WHERE appid = ?", (appid,))
     return picked
 
 
@@ -31,5 +29,5 @@ if __name__ == "__main__":
     picked = make_changes(conn, int(sys.argv[1]) if len(sys.argv) > 1 else 3)
     if not picked:
         print("database is empty, call /check once first")
-    for url in picked:
-        print("changed", url)
+    for appid in picked:
+        print("made pricier:", appid)

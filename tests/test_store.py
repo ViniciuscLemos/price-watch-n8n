@@ -1,56 +1,67 @@
 from price_watch import store
-from price_watch.scraper import Book
+from price_watch.steam import Game, Price
+
+GAMES = {1: Game(1, "Terraria", "https://img/1.jpg"), 2: Game(2, "Hades II", "https://img/2.jpg")}
 
 
-def book(price=10.0, in_stock=True, url="u1"):
-    return Book(url=url, title="Some Book", price=price, in_stock=in_stock)
+def price(appid, final, initial=None, discount=0):
+    return Price(appid=appid, currency="BRL", initial=initial or final, final=final, discount=discount)
 
 
-def test_first_run_reports_nothing():
+def test_first_sight_only_reports_games_already_on_sale():
     conn = store.connect(":memory:")
-    assert store.record(conn, [book(), book(url="u2")]) == []
+    deals = store.record(conn, [price(1, 1649, 3299, 50), price(2, 8899)], GAMES)
+    assert [d["name"] for d in deals] == ["Terraria"]
+    assert deals[0]["old_price"] == 3299
+    assert deals[0]["lowest"] is False
 
 
-def test_price_drop_and_back_in_stock():
+def test_a_sale_that_goes_on_is_not_news_again():
     conn = store.connect(":memory:")
-    store.record(conn, [book(20.0, in_stock=False)])
-    changes = store.record(conn, [book(15.5, in_stock=True)])
-    assert {c["kind"] for c in changes} == {"price_drop", "back_in_stock"}
-    drop = next(c for c in changes if c["kind"] == "price_drop")
-    assert drop["old_price"] == 20.0 and drop["price"] == 15.5
+    store.record(conn, [price(1, 1649, 3299, 50)], GAMES)
+    assert store.record(conn, [price(1, 1649, 3299, 50)], {}) == []
 
 
-def test_price_going_up_is_saved_but_not_reported():
+def test_cheaper_than_last_time_is_a_deal_and_a_new_low():
     conn = store.connect(":memory:")
-    store.record(conn, [book(10.0)])
-    assert store.record(conn, [book(12.0)]) == []
-    assert [h["price"] for h in store.history(conn, "u1")] == [10.0, 12.0]
-    # and dropping back from 12 counts as a drop
-    assert store.record(conn, [book(11.0)])[0]["old_price"] == 12.0
+    store.record(conn, [price(2, 8899)], GAMES)
+    (deal,) = store.record(conn, [price(2, 6229, 8899, 30)], {})
+    assert (deal["price"], deal["old_price"], deal["discount"], deal["lowest"]) == (6229, 8899, 30, True)
+    assert deal["url"] == "https://store.steampowered.com/app/2/"
 
 
-def test_same_price_does_not_grow_history():
+def test_dropping_back_to_an_old_low_is_not_a_new_low():
     conn = store.connect(":memory:")
-    for _ in range(3):
-        store.record(conn, [book(10.0)])
-    assert len(store.history(conn, "u1")) == 1
+    store.record(conn, [price(2, 6229, 8899, 30)], GAMES)
+    store.record(conn, [price(2, 8899)], {})
+    (deal,) = store.record(conn, [price(2, 6229, 8899, 30)], {})
+    assert deal["lowest"] is False
 
 
-def test_demo_changes_show_up_on_next_check():
+def test_biggest_discount_first():
+    conn = store.connect(":memory:")
+    deals = store.record(conn, [price(2, 6229, 8899, 30), price(1, 1649, 3299, 50)], GAMES)
+    assert [d["discount"] for d in deals] == [50, 30]
+
+
+def test_game_without_a_name_is_skipped_until_it_has_one():
+    conn = store.connect(":memory:")
+    assert store.record(conn, [price(3, 1000)], GAMES) == []
+    assert not store.known(conn, 3)
+
+
+def test_history_only_grows_when_the_price_changes():
+    conn = store.connect(":memory:")
+    for final in (8899, 8899, 6229, 6229, 8899):
+        store.record(conn, [price(2, final)], GAMES)
+    assert [h["price"] for h in store.history(conn, 2)] == [8899, 6229, 8899]
+
+
+def test_demo_makes_the_next_check_find_deals():
     from price_watch.demo import make_changes
     conn = store.connect(":memory:")
-    books = [book(10.0, url=f"u{i}") for i in range(4)]
-    store.record(conn, books)
+    store.record(conn, [price(1, 3299), price(2, 8899)], GAMES)
     make_changes(conn, 2, seed=1)
-    kinds = sorted(c["kind"] for c in store.record(conn, books))
-    assert kinds == ["back_in_stock", "price_drop"]
-
-
-def test_demo_old_price_has_two_decimals():
-    from price_watch.demo import make_changes
-    conn = store.connect(":memory:")
-    books = [book(31.77, url="u0")]
-    store.record(conn, books)
-    make_changes(conn, 1, seed=1)
-    (change,) = store.record(conn, books)
-    assert change["old_price"] == 36.77
+    deals = store.record(conn, [price(1, 3299), price(2, 8899)], {})
+    assert sorted((d["name"], d["old_price"], d["lowest"]) for d in deals) == [
+        ("Hades II", 10678, True), ("Terraria", 3958, True)]
