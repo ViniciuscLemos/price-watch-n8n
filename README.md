@@ -4,6 +4,10 @@ Tells me when a game I want on Steam goes on sale: on Discord, as a push notific
 
 Every morning [n8n](https://n8n.io) asks a small Python API for the prices of the games on my list. The API reads them from the Steam store (in R$), compares them with what it saw before and answers with the deals: games that got cheaper, the discount, and whether it's the lowest price since it started watching. n8n writes the message and sends it wherever I set it up.
 
+<img src="docs/phone-push.png" alt="A real push on my phone: 3 games from the list are cheaper, Red Dead Redemption 2 at R$ 74,97 (-75%), with the game's banner" width="420">
+
+The push above is real: the `real run` workflow in Actions runs it against the live Steam store and sends the deals to the channels saved as repo secrets.
+
 ![The workflow in the n8n editor after a run: every node green, the deals going out to Discord, the phone and WhatsApp](docs/n8n-run.png)
 
 ## Why I built it
