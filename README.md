@@ -1,5 +1,7 @@
 # price-watch-n8n
 
+[![ci](https://github.com/ViniciuscLemos/price-watch-n8n/actions/workflows/ci.yml/badge.svg)](https://github.com/ViniciuscLemos/price-watch-n8n/actions/workflows/ci.yml)
+
 Tells me when a game I want on Steam goes on sale: on Discord, as a push notification on my phone or on WhatsApp.
 
 Every morning [n8n](https://n8n.io) asks a small Python API for the prices of the games on my list. The API reads them from the Steam store (in R$), compares them with what it saw before and answers with the deals: games that got cheaper, the discount, and whether it's the lowest price since it started watching. n8n writes the message and sends it wherever I set it up.
@@ -31,8 +33,10 @@ flowchart LR
 
 - The games are in [`watchlist.json`](watchlist.json) (Elden Ring, Hollow Knight: Silksong, Baldur's Gate 3, RDR2...). Any Steam game works, the id is the number in the store url. n8n can also send its own list: `{"appids": [1245620, 1030300]}`.
 - `POST /check` gets every price in one call to the store's public `appdetails` endpoint (no key needed) and returns the deals, biggest discount first.
-- A game already on sale the first time it's seen is a deal. A sale that just goes on is not news again the next day, otherwise the same Terraria message would show up for two weeks.
+- A game can have a target price in the list (`"target": 40.00`, in the store's currency). Under it, it's worth a message even without a sale, and the message says so.
+- A game already on sale (or already under its target) the first time it's seen is a deal. A sale that just goes on is not news again the next day, otherwise the same Terraria message would show up for two weeks.
 - "Lowest" means the lowest since the API started watching that game, not the lowest ever on Steam.
+- If the store doesn't answer, `/check` returns a 502 saying so, which is what shows up on the failed node in n8n.
 - `GET /games` lists what it's watching with the current and lowest price, `GET /history?appid=...` every price a game had.
 
 The Code node turns the deals into three messages: Discord cards with the game's banner, a short push that opens the store page when tapped, and plain text for WhatsApp.
