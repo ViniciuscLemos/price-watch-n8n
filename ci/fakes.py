@@ -48,7 +48,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8")
         save(self.path.strip("/").split("/")[0] + " " + body)
-        self.reply(204 if self.path.startswith("/discord") else 200)
+        # Discord answers 204 with no body; ntfy answers with the message as json
+        if self.path.startswith("/discord"):
+            return self.reply(204)
+        self.reply(200, {"id": "ci", "event": "message"})
 
     def log_message(self, *args):
         pass
