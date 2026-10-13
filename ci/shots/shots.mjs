@@ -33,6 +33,12 @@ try {
   await page.getByText(/output/i).first().waitFor();
   await page.waitForTimeout(1500);
   await shot('code-node');
+
+  // the api's own page, after the run above filled its database
+  const dashboard = await browser.newPage({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2 });
+  await dashboard.goto('http://localhost:8000/');
+  await dashboard.waitForLoadState('networkidle');
+  await dashboard.screenshot({ path: `${out}/dashboard.png`, fullPage: true });
 } catch (error) {
   await shot('error').catch(() => {});
   throw error;
