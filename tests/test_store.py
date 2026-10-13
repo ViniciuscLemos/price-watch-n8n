@@ -65,3 +65,23 @@ def test_demo_makes_the_next_check_find_deals():
     deals = store.record(conn, [price(1, 3299), price(2, 8899)], {})
     assert sorted((d["name"], d["old_price"], d["lowest"]) for d in deals) == [
         ("Hades II", 10678, True), ("Terraria", 3958, True)]
+
+
+def test_under_target_on_first_sight_is_a_deal_even_without_a_sale():
+    conn = store.connect(":memory:")
+    (deal,) = store.record(conn, [price(2, 8899)], GAMES, targets={2: 9000})
+    assert (deal["below_target"], deal["target"], deal["discount"]) == (True, 9000, 0)
+
+
+def test_over_target_without_a_sale_is_quiet():
+    conn = store.connect(":memory:")
+    assert store.record(conn, [price(2, 8899)], GAMES, targets={2: 5000}) == []
+
+
+def test_a_drop_says_whether_it_is_under_target():
+    conn = store.connect(":memory:")
+    store.record(conn, [price(2, 8899)], GAMES, targets={2: 5000})
+    (deal,) = store.record(conn, [price(2, 6229, 8899, 30)], {}, targets={2: 5000})
+    assert deal["below_target"] is False
+    (deal,) = store.record(conn, [price(2, 4449, 8899, 50)], {}, targets={2: 5000})
+    assert deal["below_target"] is True

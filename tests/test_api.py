@@ -1,3 +1,6 @@
+import pytest
+import requests
+
 from price_watch.api import create_app, load_watchlist
 from price_watch.steam import Game, Price
 
@@ -17,7 +20,7 @@ def fake_game(appid):
 
 def client(tmp_path):
     return create_app(str(tmp_path / "test.db"), fetch_prices=fake_prices, fetch_game=fake_game,
-                      watchlist=lambda: [1174180]).test_client()
+                      watchlist=lambda: {1174180: None}).test_client()
 
 
 def test_check_returns_deals_between_runs(tmp_path):
@@ -61,5 +64,31 @@ def test_history_needs_an_appid(tmp_path):
 
 
 def test_the_watchlist_in_the_repo_loads():
-    appids = load_watchlist()
-    assert len(appids) == len(set(appids)) >= 10
+    assert len(load_watchlist()) >= 10
+
+
+def test_watchlist_targets_are_in_cents(tmp_path):
+    path = tmp_path / "w.json"
+    path.write_text('[{"appid": 1, "target": 39.9}, {"appid": 2}]')
+    assert load_watchlist(path) == {1: 3990, 2: None}
+    path.write_text('[{"appid": 1, "target": "cheap"}]')
+    with pytest.raises(ValueError):
+        load_watchlist(path)
+
+
+def test_target_from_the_watchlist(tmp_path):
+    app = create_app(str(tmp_path / "t.db"), fetch_prices=fake_prices, fetch_game=fake_game,
+                     watchlist=lambda: {1174180: 30000})
+    prices[1174180] = 29990
+    (deal,) = app.test_client().post("/check").get_json()["deals"]
+    assert deal["below_target"] is True
+
+
+def test_steam_down_is_a_502(tmp_path):
+    def down(appids):
+        raise requests.ConnectionError("no route to store.steampowered.com")
+
+    app = create_app(str(tmp_path / "d.db"), fetch_prices=down, fetch_game=fake_game, watchlist=lambda: {1: None})
+    res = app.test_client().post("/check")
+    assert res.status_code == 502
+    assert "Steam store didn't answer" in res.get_json()["error"]

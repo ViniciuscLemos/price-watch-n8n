@@ -1,9 +1,9 @@
 [
-  {"appid": 1245620, "name": "ELDEN RING"},
+  {"appid": 1245620, "name": "ELDEN RING", "target": 150.00},
   {"appid": 1091500, "name": "Cyberpunk 2077"},
   {"appid": 413150, "name": "Stardew Valley"},
   {"appid": 367520, "name": "Hollow Knight"},
-  {"appid": 1030300, "name": "Hollow Knight: Silksong"},
+  {"appid": 1030300, "name": "Hollow Knight: Silksong", "target": 40.00},
   {"appid": 1086940, "name": "Baldur's Gate 3"},
   {"appid": 1174180, "name": "Red Dead Redemption 2"},
   {"appid": 105600, "name": "Terraria"},

@@ -37,14 +37,18 @@ def known(conn: sqlite3.Connection, appid: int) -> bool:
     return conn.execute("SELECT 1 FROM games WHERE appid = ?", (appid,)).fetchone() is not None
 
 
-def record(conn: sqlite3.Connection, prices: list[Price], games: dict[int, Game]) -> list[dict]:
+def record(conn: sqlite3.Connection, prices: list[Price], games: dict[int, Game],
+           targets: dict[int, int] | None = None) -> list[dict]:
     """Saves the prices and returns the deals worth telling someone about.
 
     A deal is a game that got cheaper since the last check, or one already on sale
-    the first time it's seen. A sale that just goes on is not news again the next
-    day, otherwise the same Terraria message would show up for two weeks.
-    `games` has the name and banner of games seen for the first time.
+    (or already under its target price) the first time it's seen. A sale that just
+    goes on is not news again the next day, otherwise the same Terraria message
+    would show up for two weeks.
+    `games` has the name and banner of games seen for the first time, `targets`
+    the price (in cents) under which a game is worth a mention even without a sale.
     """
+    targets = targets or {}
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     deals = []
     with conn:
@@ -59,14 +63,16 @@ def record(conn: sqlite3.Connection, prices: list[Price], games: dict[int, Game]
                     (price.appid, game.name, game.image, price.currency, price.initial,
                      price.final, price.discount, price.final, now, now))
                 conn.execute("INSERT INTO price_history VALUES (?, ?, ?)", (price.appid, price.final, now))
-                if price.discount > 0:
-                    deals.append(deal(game.name, game.image, price, old_final=price.initial, lowest=False))
+                target = targets.get(price.appid)
+                if price.discount > 0 or (target and price.final <= target):
+                    deals.append(deal(game.name, game.image, price, old_final=price.initial,
+                                      lowest=False, target=target))
                 continue
 
             if price.final < old["final"]:
                 # "lowest" means lowest since this started watching, not ever on Steam
                 deals.append(deal(old["name"], old["image"], price, old_final=old["final"],
-                                  lowest=price.final < old["lowest"]))
+                                  lowest=price.final < old["lowest"], target=targets.get(price.appid)))
             if price.final != old["final"]:
                 conn.execute("INSERT INTO price_history VALUES (?, ?, ?)", (price.appid, price.final, now))
             conn.execute(
@@ -77,7 +83,8 @@ def record(conn: sqlite3.Connection, prices: list[Price], games: dict[int, Game]
     return sorted(deals, key=lambda d: (-d["discount"], d["name"]))
 
 
-def deal(name: str, image: str, price: Price, old_final: int, lowest: bool) -> dict:
+def deal(name: str, image: str, price: Price, old_final: int, lowest: bool,
+         target: int | None = None) -> dict:
     return {
         "appid": price.appid,
         "name": name,
@@ -89,6 +96,8 @@ def deal(name: str, image: str, price: Price, old_final: int, lowest: bool) -> d
         "full_price": price.initial,
         "discount": price.discount,
         "lowest": lowest,
+        "target": target,
+        "below_target": bool(target) and price.final <= target,
     }
 
 
