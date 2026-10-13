@@ -100,3 +100,12 @@ def test_expressions_avoid_spread():
         for value in json.dumps(node["parameters"]).split('"'):
             if value.startswith("={{"):
                 assert "..." not in value, node["name"]
+
+
+def test_code_node_target_without_a_sale():
+    d = deal("Hollow Knight: Silksong", 5999, 5999, 0)
+    d.update(target=6000, below_target=True)
+    (item,) = run_code_node([d])
+    out = item["json"]
+    assert out["title"] == "Hollow Knight: Silksong is under your target"
+    assert out["discord"]["embeds"][0]["description"] == "R$ 59,99. Under your target of R$ 60,00."
