@@ -20,7 +20,7 @@ def make_changes(conn, how_many: int = 3, seed: int | None = None) -> list[str]:
     with conn:
         for i, url in enumerate(picked):
             if i % 2 == 0:
-                conn.execute("UPDATE books SET price = price + 5 WHERE url = ?", (url,))
+                conn.execute("UPDATE books SET price = ROUND(price + 5, 2) WHERE url = ?", (url,))
             else:
                 conn.execute("UPDATE books SET in_stock = 0 WHERE url = ?", (url,))
     return picked

@@ -44,3 +44,13 @@ def test_demo_changes_show_up_on_next_check():
     make_changes(conn, 2, seed=1)
     kinds = sorted(c["kind"] for c in store.record(conn, books))
     assert kinds == ["back_in_stock", "price_drop"]
+
+
+def test_demo_old_price_has_two_decimals():
+    from price_watch.demo import make_changes
+    conn = store.connect(":memory:")
+    books = [book(31.77, url="u0")]
+    store.record(conn, books)
+    make_changes(conn, 1, seed=1)
+    (change,) = store.record(conn, books)
+    assert change["old_price"] == 36.77
