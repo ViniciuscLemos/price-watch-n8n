@@ -86,3 +86,16 @@ def test_a_drop_says_whether_it_is_under_target():
     assert deal["below_target"] is False
     (deal,) = store.record(conn, [price(2, 4449, 8899, 50)], {}, targets={2: 5000})
     assert deal["below_target"] is True
+
+
+def test_a_database_from_the_book_version_gets_the_new_tables(tmp_path):
+    import sqlite3
+    path = str(tmp_path / "old.db")
+    old = sqlite3.connect(path)
+    old.executescript("CREATE TABLE books (url TEXT PRIMARY KEY, price REAL);"
+                      "CREATE TABLE price_history (url TEXT, price REAL, seen_at TEXT);"
+                      "INSERT INTO price_history VALUES ('https://books.toscrape.com/x', 10.0, 'then');")
+    old.close()
+    conn = store.connect(path)
+    store.record(conn, [price(2, 8899)], GAMES)
+    assert [h["price"] for h in store.history(conn, 2)] == [8899]

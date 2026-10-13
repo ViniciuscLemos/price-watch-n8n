@@ -29,6 +29,11 @@ CREATE TABLE IF NOT EXISTS price_history (
 def connect(path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
+    # a database from the book version has a price_history keyed by url: nothing in it
+    # means anything for games, and CREATE IF NOT EXISTS would keep it as it is
+    columns = [r["name"] for r in conn.execute("PRAGMA table_info(price_history)")]
+    if columns and "appid" not in columns:
+        conn.executescript("DROP TABLE price_history; DROP TABLE IF EXISTS books;")
     conn.executescript(SCHEMA)
     return conn
 
