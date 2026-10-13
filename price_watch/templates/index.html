@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steam deals watch</title>
+<style>
+  :root { --bg: #0e141b; --card: #16202d; --line: #263445; --text: #e6edf3; --muted: #8b9bb0;
+          --sale: #4c6b22; --sale-text: #beee11; --blue: #66c0f4; --low: #57f287; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 "Segoe UI", Arial, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 28px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+  .game { display: grid; grid-template-columns: 184px 1fr auto; gap: 16px; align-items: center;
+          background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+  .game img { width: 184px; height: 86px; object-fit: cover; border-radius: 6px; display: block; }
+  .name { font-weight: 600; font-size: 16px; color: var(--text); text-decoration: none; }
+  .name:hover { color: var(--blue); }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .meta b { color: var(--low); font-weight: 600; }
+  .price { text-align: right; min-width: 150px; }
+  .now { font-size: 20px; font-weight: 700; }
+  .full { color: var(--muted); text-decoration: line-through; font-size: 13px; }
+  .off { display: inline-block; background: var(--sale); color: var(--sale-text); font-weight: 700;
+         border-radius: 4px; padding: 1px 6px; margin-right: 6px; font-size: 14px; }
+  svg { display: block; margin-top: 6px; }
+  .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+  @media (max-width: 640px) {
+    .game { grid-template-columns: 1fr; }
+    .game img { width: 100%; height: auto; }
+    .price { text-align: left; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Steam deals watch</h1>
+  <p class="sub">{{ games|length }} games, prices in {{ currency }}. Updated every time n8n runs the check.</p>
+  {% for g in games %}
+  <div class="game">
+    <a href="{{ g.url }}"><img src="{{ g.image }}" alt="{{ g.name }}" loading="lazy"></a>
+    <div>
+      <a class="name" href="{{ g.url }}">{{ g.name }}</a>
+      <div class="meta">
+        Lowest seen: {% if g.lowest == g.price %}<b>{{ g.lowest_text }} (now)</b>{% else %}{{ g.lowest_text }}{% endif %}
+        {% if g.target_text %} · target {{ g.target_text }}{% endif %}
+      </div>
+      {{ g.sparkline|safe }}
+    </div>
+    <div class="price">
+      {% if g.discount %}<span class="off">-{{ g.discount }}%</span><span class="full">{{ g.full_text }}</span><br>{% endif %}
+      <span class="now">{{ g.price_text }}</span>
+    </div>
+  </div>
+  {% else %}
+  <p class="empty">Nothing yet: run the workflow (or POST /check) once.</p>
+  {% endfor %}
+</main>
+</body>
+</html>

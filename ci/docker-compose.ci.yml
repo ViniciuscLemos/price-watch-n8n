@@ -14,6 +14,9 @@ services:
   api:
     environment:
       - STEAM_STORE_URL=http://fakes:8080
+      - STEAM_API_URL=http://fakes:8080
+      - STEAM_COMMUNITY_URL=http://fakes:8080
+      - STEAM_PROFILE=ci-profile
     depends_on:
       fakes:
         condition: service_healthy

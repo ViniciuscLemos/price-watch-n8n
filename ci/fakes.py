@@ -1,7 +1,7 @@
-"""Pretends to be the Steam store, Discord, ntfy and CallMeBot in CI.
+"""Pretends to be Steam (store, api and community), Discord, ntfy and CallMeBot in CI.
 
-GET /api/appdetails answers from the test fixtures (prices) and the watchlist
-(names), so the e2e run doesn't depend on Steam being up or on real sales.
+The Steam endpoints answer from the test fixtures (prices, a wishlist) and the
+watchlist (names), so the e2e run doesn't depend on Steam being up or on real sales.
 Everything the senders deliver is appended to /out/messages.txt.
 """
 
@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 
 PRICES = json.load(open("/fixtures/prices.json", encoding="utf-8"))
 NAMES = {str(g["appid"]): g["name"] for g in json.load(open("/watchlist.json", encoding="utf-8"))}
+WISHLIST = json.load(open("/fixtures/wishlist.json", encoding="utf-8"))
 
 
 def save(line: str):
@@ -34,12 +35,21 @@ class Handler(BaseHTTPRequestHandler):
         query = {k: v[0] for k, v in parse_qs(url.query).items()}
         if url.path == "/api/appdetails":
             ids = query["appids"].split(",")
-            if query.get("filters") == "basic":
-                appid = ids[0]
-                data = {"name": NAMES.get(appid, f"Game {appid}"),
-                        "header_image": f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"}
-                return self.reply(200, {appid: {"success": True, "data": data}})
             return self.reply(200, {i: PRICES.get(i, {"success": False}) for i in ids})
+        if url.path == "/IStoreBrowseService/GetItems/v1/":
+            ids = [str(i["appid"]) for i in json.loads(query["input_json"])["ids"]]
+            items = [{"success": 1, "appid": int(i), "name": NAMES.get(i, f"Game {i}"),
+                      "assets": {"asset_url_format": f"steam/apps/{i}/${{FILENAME}}", "header": "header.jpg"}}
+                     for i in ids]
+            return self.reply(200, {"response": {"store_items": items}})
+        if url.path == "/id/ci-profile/":
+            body = b"<profile><steamID64>76561198000000001</steamID64></profile>"
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            return self.wfile.write(body)
+        if url.path == "/IWishlistService/GetWishlist/v1/":
+            return self.reply(200, WISHLIST)
         if url.path == "/whatsapp.php":
             save("whatsapp " + json.dumps(query, ensure_ascii=False))
             return self.reply(200, {})

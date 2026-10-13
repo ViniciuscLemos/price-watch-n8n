@@ -1,0 +1,38 @@
+{
+ "response": {
+  "store_items": [
+   {
+    "item_type": 0,
+    "id": 1245620,
+    "success": 1,
+    "visible": true,
+    "name": "ELDEN RING",
+    "appid": 1245620,
+    "assets": {
+     "asset_url_format": "steam/apps/1245620/${FILENAME}?t=1790290043",
+     "header": "header.jpg"
+    }
+   },
+   {
+    "item_type": 0,
+    "id": 1174180,
+    "success": 1,
+    "visible": true,
+    "name": "Red Dead Redemption 2",
+    "appid": 1174180,
+    "assets": {
+     "asset_url_format": "steam/apps/1174180/${FILENAME}?t=1759502961",
+     "header": "header.jpg"
+    }
+   },
+   {
+    "item_type": 0,
+    "id": 999999999,
+    "success": 15,
+    "visible": false,
+    "name": "",
+    "appid": 0
+   }
+  ]
+ }
+}

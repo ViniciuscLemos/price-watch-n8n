@@ -1,3 +1,4 @@
+import pytest
 import json
 from pathlib import Path
 
@@ -53,11 +54,50 @@ def test_fetch_prices_asks_for_all_ids_in_one_call():
     assert params == {"appids": "1245620,1174180", "cc": "br", "filters": "price_overview"}
 
 
-def test_fetch_game_reads_name_and_banner():
-    game = steam.fetch_game(1245620, session=FakeSession(load("basic-1245620.json")))
-    assert game.name == "ELDEN RING"
-    assert "header.jpg" in game.image
+def test_names_and_banners_come_in_one_call():
+    session = FakeSession(load("items.json"))
+    games = steam.fetch_games([1245620, 1174180, 999999999], session=session)
+    assert len(session.calls) == 1
+    assert games[1245620].name == "ELDEN RING"
+    assert games[1174180].image.startswith("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/header.jpg")
+    assert 999999999 not in games  # success 15, no name
 
 
-def test_fetch_game_that_does_not_exist():
-    assert steam.fetch_game(999999999, session=FakeSession({"999999999": {"success": False}})) is None
+def test_big_lists_go_in_batches():
+    session = FakeSession({})
+    steam.fetch_prices(list(range(1, 251)), session=session)
+    assert [len(params["appids"].split(",")) for _, params in session.calls] == [100, 100, 50]
+
+
+class TextSession(FakeSession):
+    def get(self, url, **kwargs):
+        self.calls.append((url, kwargs.get("params")))
+        res = FakeResponse(self.payload)
+        res.text = self.payload
+        return res
+
+
+def test_steamid_from_what_people_paste():
+    assert steam.steamid_of("76561198000000001") == "76561198000000001"
+    assert steam.steamid_of("https://steamcommunity.com/profiles/76561198000000001/") == "76561198000000001"
+    xml = "<profile><steamID64>76561198000000002</steamID64></profile>"
+    for pasted in ("vini", "https://steamcommunity.com/id/vini/", "steamcommunity.com/id/vini"):
+        session = TextSession(xml)
+        assert steam.steamid_of(pasted, session=session) == "76561198000000002"
+        assert session.calls[0][0].endswith("/id/vini/")
+
+
+def test_unknown_profile_name():
+    with pytest.raises(steam.ProfileError):
+        steam.steamid_of("nobody", session=TextSession("<response><error>The specified profile could not be found.</error></response>"))
+    with pytest.raises(steam.ProfileError):
+        steam.steamid_of("not a profile!")
+
+
+def test_wishlist_in_priority_order():
+    assert steam.parse_wishlist(load("wishlist.json")) == [1030300, 1174180, 2246340]
+
+
+def test_private_wishlist_says_so():
+    with pytest.raises(steam.ProfileError, match="private"):
+        steam.fetch_wishlist("76561198000000001", session=FakeSession({"response": {}}))

@@ -1,8 +1,12 @@
 services:
   api:
     build: .
+    ports:
+      # the page with every game and its price history
+      - "8000:8000"
     environment:
       - STEAM_COUNTRY=${STEAM_COUNTRY:-br}
+      - STEAM_PROFILE=${STEAM_PROFILE:-}
     volumes:
       - api-data:/data
       # edit the list without rebuilding

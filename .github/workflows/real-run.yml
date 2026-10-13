@@ -12,6 +12,7 @@ jobs:
       NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
       WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
       WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
+      STEAM_PROFILE: ${{ secrets.STEAM_PROFILE }}
     steps:
       - uses: actions/checkout@v5
       - run: docker compose up -d --build --wait
