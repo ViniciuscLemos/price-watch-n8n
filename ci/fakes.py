@@ -22,7 +22,9 @@ class Handler(BaseHTTPRequestHandler):
     def reply(self, status, payload=None):
         body = json.dumps(payload).encode() if payload is not None else b""
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
+        # an empty body marked as json makes n8n's http node fail, like a real 204 wouldn't
+        if payload is not None:
+            self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
