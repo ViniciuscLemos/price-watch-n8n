@@ -92,3 +92,11 @@ def test_code_node_keeps_the_limits():
     out = item["json"]
     assert len(out["discord"]["embeds"]) == 10
     assert len(out["whatsapp"]) <= 1505
+
+
+def test_expressions_avoid_spread():
+    # n8n 1.64's expression parser chokes on "...": the phone push never left in CI
+    for node in WORKFLOW["nodes"]:
+        for value in json.dumps(node["parameters"]).split('"'):
+            if value.startswith("={{"):
+                assert "..." not in value, node["name"]

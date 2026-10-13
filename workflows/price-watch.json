@@ -186,7 +186,7 @@
         "url": "={{ $env.NTFY_URL || 'https://ntfy.sh' }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ ...$json.push, topic: $env.NTFY_TOPIC }) }}",
+        "jsonBody": "={{ JSON.stringify(Object.assign({}, $json.push, { topic: $env.NTFY_TOPIC })) }}",
         "options": {}
       },
       "id": "b1f0c9a0-0001-4c1e-9a10-000000000009",

@@ -17,7 +17,8 @@ for _ in $(seq 60); do
 done
 # --separate takes each file as one workflow (a plain --input wants an array)
 $compose exec -T n8n n8n import:workflow --separate --input=/workflows/
-run() { $compose exec -T n8n n8n execute --id=pricewatch000001 > /dev/null; }
+# quiet when it works, the whole execution (with the failing node) when it doesn't
+run() { local log; log=$($compose exec -T n8n n8n execute --id=pricewatch000001 2>&1) || { echo "$log" | tail -80; return 1; }; }
 
 run
 cat $out
