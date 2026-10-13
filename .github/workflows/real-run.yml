@@ -1,0 +1,29 @@
+name: real run
+
+# Runs the workflow once against the real Steam store and sends the deals to the
+# real channels set as repo secrets (only the ones that exist). Run by hand.
+on: workflow_dispatch
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
+      WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker compose up -d --build --wait
+      - name: wait for n8n's migrations
+        run: |
+          for _ in $(seq 60); do
+            docker compose logs n8n | grep -q "Editor is now accessible" && break
+            sleep 2
+          done
+      - run: docker compose exec -T n8n n8n import:workflow --separate --input=/workflows/
+      # a fresh database, so the games already on sale count as deals
+      - run: docker compose exec -T n8n n8n execute --id=pricewatch000001 > /dev/null
+      - run: curl -s localhost:5678/healthz && docker compose exec -T api python -c "import json,urllib.request; print(json.dumps(json.load(urllib.request.urlopen('http://localhost:8000/games'))['games'][:5], indent=1))"
+      - if: failure()
+        run: docker compose logs
