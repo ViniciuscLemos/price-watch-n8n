@@ -54,7 +54,7 @@ You need Docker.
 ```bash
 cp .env.example .env   # fill in the channels you want, see below
 docker compose up -d --build
-docker compose exec n8n n8n import:workflow --input=/workflows/price-watch.json
+docker compose exec n8n n8n import:workflow --separate --input=/workflows/
 ```
 
 Then open http://localhost:5678, open "Steam deals watch" and click "Test workflow". To leave it running every day, turn the workflow on (the "Active" toggle).
