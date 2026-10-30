@@ -36,7 +36,7 @@
 <body>
 <main>
   <h1>Steam deals watch</h1>
-  <p class="sub">{{ games|length }} games, prices in {{ currency }}. Updated every time n8n runs the check.</p>
+  <p class="sub">{{ games|length }} game{{ 's' if games|length != 1 }}, {{ on_sale }} on sale, prices in {{ currency }}.{% if last_check %} Last check: {{ last_check }} UTC.{% endif %}</p>
   {% for g in games %}
   <div class="game">
     <a href="{{ g.url }}"><img src="{{ g.image }}" alt="{{ g.name }}" loading="lazy"></a>

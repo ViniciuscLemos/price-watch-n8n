@@ -132,6 +132,7 @@ def test_page_lists_the_games_with_their_history(tmp_path):
     assert "Game 1174180" in html
     assert "R$ 74,97" in html and "-75%" in html
     assert "<polyline" in html
+    assert "1 game, 1 on sale" in html and "Last check: 20" in html
 
 
 def test_page_before_the_first_check(tmp_path):

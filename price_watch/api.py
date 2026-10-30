@@ -99,7 +99,11 @@ def create_app(db_path: str | None = None, fetch_prices=steam.fetch_prices,
                 "sparkline": sparkline(row["history"]),
             })
         currency = rows[0]["currency"] if rows else "BRL"
-        return render_template("index.html", games=games, currency=currency)
+        on_sale = sum(1 for g in games if g["discount"])
+        # last_seen is ISO in UTC, so the biggest string is the latest check
+        last_check = max((r["last_seen"] for r in rows), default="")[:16].replace("T", " ")
+        return render_template("index.html", games=games, currency=currency, on_sale=on_sale,
+                               last_check=last_check)
 
     @app.get("/games")
     def games():
