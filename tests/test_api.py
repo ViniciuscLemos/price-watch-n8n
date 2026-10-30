@@ -41,6 +41,15 @@ def test_check_returns_deals_between_runs(tmp_path):
     assert c.get("/games").get_json()["games"][0]["lowest"] == 7497
 
 
+def test_games_on_sale_only(tmp_path):
+    c = client(tmp_path)
+    prices[10] = 9990
+    c.post("/check", json={"appids": [10, 20]})
+    assert [g["appid"] for g in c.get("/games").get_json()["games"]] == [10, 20]
+    assert [g["appid"] for g in c.get("/games?on_sale=1").get_json()["games"]] == [10]
+    assert c.get("/games?on_sale=yes").status_code == 400
+
+
 def test_check_takes_its_own_list(tmp_path):
     res = client(tmp_path).post("/check", json={"appids": [10, 20]})
     assert res.get_json()["checked"] == 2

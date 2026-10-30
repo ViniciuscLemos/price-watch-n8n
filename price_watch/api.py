@@ -103,11 +103,14 @@ def create_app(db_path: str | None = None, fetch_prices=steam.fetch_prices,
 
     @app.get("/games")
     def games():
+        on_sale = request.args.get("on_sale", "0")
+        if on_sale not in ("0", "1"):
+            return {"error": "on_sale must be 0 or 1"}, 400
         conn = store.connect(db_path)
         try:
             rows = conn.execute(
                 "SELECT appid, name, currency, final AS price, initial AS full_price, discount, lowest, last_seen "
-                "FROM games ORDER BY discount DESC, name")
+                "FROM games WHERE discount > 0 OR ? = '0' ORDER BY discount DESC, name", (on_sale,))
             return jsonify(games=[dict(r) for r in rows])
         finally:
             conn.close()
