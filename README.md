@@ -37,7 +37,7 @@ flowchart LR
 - A game already on sale (or already under its target) the first time it's seen is a deal. A sale that just goes on is not news again the next day, otherwise the same Terraria message would show up for two weeks.
 - "Lowest" means the lowest since the API started watching that game, not the lowest ever on Steam.
 - If the store doesn't answer, `/check` returns a 502 saying so, which is what shows up on the failed node in n8n.
-- `GET /games` lists what it's watching with the current and lowest price (`?on_sale=1` for only the ones on sale), `GET /history?appid=...` every price a game had.
+- `GET /games` lists what it's watching with the current and lowest price (`?on_sale=1` for only the ones on sale, `?max_price=5000` for up to R$ 50 in cents, `?sort=price|discount|name`, and `at_lowest` says if today's price is the lowest it has seen), `GET /history?appid=...` every price a game had.
 
 The API also has a page (http://localhost:8000) with every game it watches, the price now, the lowest it has seen and a line of the price history:
 
