@@ -50,6 +50,26 @@ def test_games_on_sale_only(tmp_path):
     assert c.get("/games?on_sale=yes").status_code == 400
 
 
+def test_games_cheaper_than_and_sorted(tmp_path):
+    c = client(tmp_path)
+    prices[10] = 9990
+    prices[30] = 4990
+    c.post("/check", json={"appids": [10, 20, 30]})
+    games = c.get("/games?sort=price").get_json()["games"]
+    assert [g["appid"] for g in games] == [30, 10, 20]
+    # first check: today's price is the lowest seen
+    assert all(g["at_lowest"] for g in games)
+    assert [g["appid"] for g in c.get("/games?max_price=9990").get_json()["games"]] == [10, 30]
+    assert [g["appid"] for g in c.get("/games?max_price=5000&on_sale=1").get_json()["games"]] == [30]
+    assert c.get("/games?sort=price;drop").status_code == 400
+    assert c.get("/games?max_price=50.5").status_code == 400
+
+    prices[30] = 29990
+    c.post("/check", json={"appids": [30]})
+    game = next(g for g in c.get("/games").get_json()["games"] if g["appid"] == 30)
+    assert game["at_lowest"] is False and game["lowest"] == 4990
+
+
 def test_check_takes_its_own_list(tmp_path):
     res = client(tmp_path).post("/check", json={"appids": [10, 20]})
     assert res.get_json()["checked"] == 2

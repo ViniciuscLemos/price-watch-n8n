@@ -105,17 +105,29 @@ def create_app(db_path: str | None = None, fetch_prices=steam.fetch_prices,
         return render_template("index.html", games=games, currency=currency, on_sale=on_sale,
                                last_check=last_check)
 
+    # the user only picks a key, the SQL comes from here
+    sorts = {"discount": "discount DESC, name", "price": "final, name", "name": "name"}
+
     @app.get("/games")
     def games():
         on_sale = request.args.get("on_sale", "0")
         if on_sale not in ("0", "1"):
             return {"error": "on_sale must be 0 or 1"}, 400
+        sort = request.args.get("sort", "discount")
+        if sort not in sorts:
+            return {"error": f"sort must be one of: {', '.join(sorts)}"}, 400
+        # in cents, like everything else in the API: max_price=5000 is R$ 50,00
+        max_price = request.args.get("max_price", "")
+        if max_price and not max_price.isdigit():
+            return {"error": "max_price must be a whole number of cents"}, 400
         conn = store.connect(db_path)
         try:
             rows = conn.execute(
-                "SELECT appid, name, currency, final AS price, initial AS full_price, discount, lowest, last_seen "
-                "FROM games WHERE discount > 0 OR ? = '0' ORDER BY discount DESC, name", (on_sale,))
-            return jsonify(games=[dict(r) for r in rows])
+                "SELECT appid, name, currency, final AS price, initial AS full_price, discount, lowest, last_seen, "
+                "final <= lowest AS at_lowest "
+                "FROM games WHERE (discount > 0 OR ? = '0') AND (? = '' OR final <= CAST(? AS INTEGER)) "
+                f"ORDER BY {sorts[sort]}", (on_sale, max_price, max_price or "0"))
+            return jsonify(games=[{**dict(r), "at_lowest": bool(r["at_lowest"])} for r in rows])
         finally:
             conn.close()
 
