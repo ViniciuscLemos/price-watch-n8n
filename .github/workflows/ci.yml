@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -23,7 +23,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: docker compose config --quiet
       - run: docker compose build api
 
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, docker]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: bash ci/e2e.sh
       - if: failure()
         run: docker compose -f docker-compose.yml -f ci/docker-compose.ci.yml logs; cat ci-out/messages.txt || true

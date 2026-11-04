@@ -14,7 +14,7 @@ jobs:
       WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
       STEAM_PROFILE: ${{ secrets.STEAM_PROFILE }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: docker compose up -d --build --wait
       - name: wait for n8n's migrations
         run: |
