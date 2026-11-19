@@ -63,6 +63,11 @@ def test_games_cheaper_than_and_sorted(tmp_path):
     assert [g["appid"] for g in c.get("/games?max_price=5000&on_sale=1").get_json()["games"]] == [30]
     assert c.get("/games?sort=price;drop").status_code == 400
     assert c.get("/games?max_price=50.5").status_code == 400
+    # the fake store gives 75% off to whatever isn't at full price
+    assert [g["appid"] for g in c.get("/games?min_discount=50&sort=price").get_json()["games"]] == [30, 10]
+    assert c.get("/games?min_discount=80").get_json()["games"] == []
+    assert c.get("/games?min_discount=150").status_code == 400
+    assert c.get("/games?min_discount=-5").status_code == 400
 
     prices[30] = 29990
     c.post("/check", json={"appids": [30]})

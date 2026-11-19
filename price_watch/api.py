@@ -120,13 +120,18 @@ def create_app(db_path: str | None = None, fetch_prices=steam.fetch_prices,
         max_price = request.args.get("max_price", "")
         if max_price and not max_price.isdigit():
             return {"error": "max_price must be a whole number of cents"}, 400
+        # "only the big sales": min_discount=50 is half price or less
+        min_discount = request.args.get("min_discount", "0")
+        if not min_discount.isdigit() or int(min_discount) > 100:
+            return {"error": "min_discount must be a whole percent from 0 to 100"}, 400
         conn = store.connect(db_path)
         try:
             rows = conn.execute(
                 "SELECT appid, name, currency, final AS price, initial AS full_price, discount, lowest, last_seen, "
                 "final <= lowest AS at_lowest "
                 "FROM games WHERE (discount > 0 OR ? = '0') AND (? = '' OR final <= CAST(? AS INTEGER)) "
-                f"ORDER BY {sorts[sort]}", (on_sale, max_price, max_price or "0"))
+                "AND discount >= ? "
+                f"ORDER BY {sorts[sort]}", (on_sale, max_price, max_price or "0", int(min_discount)))
             return jsonify(games=[{**dict(r), "at_lowest": bool(r["at_lowest"])} for r in rows])
         finally:
             conn.close()
