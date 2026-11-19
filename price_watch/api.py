@@ -20,6 +20,11 @@ def load_watchlist(path: Path = WATCHLIST) -> dict[int, int | None]:
     """
     games = {}
     for entry in json.loads(path.read_text("utf-8")):
+        if "appid" not in entry:
+            raise ValueError(f"every game in {path.name} needs an appid, this one has none: {entry!r}")
+        # the second line used to win in silence, so a target set on the first one was lost
+        if int(entry["appid"]) in games:
+            raise ValueError(f"appid {entry['appid']} is in {path.name} twice")
         target = entry.get("target")
         if target is not None and (not isinstance(target, (int, float)) or target <= 0):
             raise ValueError(f"target for {entry['appid']} must be a positive price, got {target!r}")

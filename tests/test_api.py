@@ -111,6 +111,16 @@ def test_watchlist_targets_are_in_cents(tmp_path):
         load_watchlist(path)
 
 
+def test_watchlist_mistakes_are_named(tmp_path):
+    path = tmp_path / "w.json"
+    path.write_text('[{"appid": 1, "target": 39.9}, {"appid": 1}]')
+    with pytest.raises(ValueError, match="appid 1 is in w.json twice"):
+        load_watchlist(path)
+    path.write_text('[{"target": 10}]')
+    with pytest.raises(ValueError, match="needs an appid"):
+        load_watchlist(path)
+
+
 def test_target_from_the_watchlist(tmp_path):
     app = create_app(str(tmp_path / "t.db"), fetch_prices=fake_prices, fetch_games=fake_games,
                      watchlist=lambda: {1174180: 30000})
