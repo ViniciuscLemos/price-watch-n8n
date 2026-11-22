@@ -129,14 +129,20 @@ def create_app(db_path: str | None = None, fetch_prices=steam.fetch_prices,
         min_discount = request.args.get("min_discount", "0")
         if not min_discount.isdigit() or int(min_discount) > 100:
             return {"error": "min_discount must be a whole percent from 0 to 100"}, 400
+        # part of the name, any case: q=hollow finds Hollow Knight
+        q = request.args.get("q", "").strip()
+        if len(q) > 100:
+            return {"error": "q must have at most 100 characters"}, 400
+        # % and _ are wildcards in LIKE, so they're escaped to mean themselves
+        pattern = "%" + q.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
         conn = store.connect(db_path)
         try:
             rows = conn.execute(
                 "SELECT appid, name, currency, final AS price, initial AS full_price, discount, lowest, last_seen, "
                 "final <= lowest AS at_lowest "
                 "FROM games WHERE (discount > 0 OR ? = '0') AND (? = '' OR final <= CAST(? AS INTEGER)) "
-                "AND discount >= ? "
-                f"ORDER BY {sorts[sort]}", (on_sale, max_price, max_price or "0", int(min_discount)))
+                "AND discount >= ? AND lower(name) LIKE ? ESCAPE '\\' "
+                f"ORDER BY {sorts[sort]}", (on_sale, max_price, max_price or "0", int(min_discount), pattern))
             return jsonify(games=[{**dict(r), "at_lowest": bool(r["at_lowest"])} for r in rows])
         finally:
             conn.close()

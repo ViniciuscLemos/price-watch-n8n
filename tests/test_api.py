@@ -75,6 +75,22 @@ def test_games_cheaper_than_and_sorted(tmp_path):
     assert game["at_lowest"] is False and game["lowest"] == 4990
 
 
+def test_games_by_part_of_the_name(tmp_path):
+    def named(appids):
+        names = {1: "Hollow Knight", 2: "Hades", 3: "100% Orange Juice"}
+        return {a: Game(a, names[a], "") for a in appids}
+
+    c = create_app(str(tmp_path / "test.db"), fetch_prices=fake_prices, fetch_games=named,
+                   watchlist=lambda: {}).test_client()
+    c.post("/check", json={"appids": [1, 2, 3]})
+    names = lambda q: [g["name"] for g in c.get("/games", query_string={"q": q, "sort": "name"}).get_json()["games"]]  # noqa: E731
+    assert names("HOLLOW") == ["Hollow Knight"]
+    assert names("h") == ["Hades", "Hollow Knight"]
+    assert names("100%") == ["100% Orange Juice"]
+    assert names("%") == ["100% Orange Juice"]
+    assert c.get("/games", query_string={"q": "x" * 101}).status_code == 400
+
+
 def test_check_takes_its_own_list(tmp_path):
     res = client(tmp_path).post("/check", json={"appids": [10, 20]})
     assert res.get_json()["checked"] == 2
