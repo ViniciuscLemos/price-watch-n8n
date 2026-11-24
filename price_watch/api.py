@@ -2,6 +2,7 @@
 
 import json
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -153,9 +154,16 @@ def create_app(db_path: str | None = None, fetch_prices=steam.fetch_prices,
         if not appid.isdigit():
             # an empty list here looked like "never seen", which hid typos in the query
             return {"error": "appid is required"}, 400
+        # a year of checks every 6 hours is 1400 points; ?days=30 is what a chart needs
+        days = request.args.get("days", "")
+        if days and (not days.isdigit() or not 1 <= int(days) <= 3650):
+            return {"error": "days must be a whole number from 1 to 3650"}, 400
+        since = ""
+        if days:
+            since = (datetime.now(timezone.utc) - timedelta(days=int(days))).isoformat(timespec="seconds")
         conn = store.connect(db_path)
         try:
-            return jsonify(appid=int(appid), prices=store.history(conn, int(appid)))
+            return jsonify(appid=int(appid), prices=store.history(conn, int(appid), since))
         finally:
             conn.close()
 

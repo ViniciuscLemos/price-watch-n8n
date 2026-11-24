@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 import requests
 
@@ -112,6 +114,20 @@ def test_history_needs_an_appid(tmp_path):
     c = client(tmp_path)
     assert c.get("/history").status_code == 400
     assert c.get("/history", query_string={"appid": "elden"}).status_code == 400
+
+
+def test_history_of_the_last_days(tmp_path):
+    c = client(tmp_path)
+    c.post("/check", json={"appids": [40]})
+    conn = sqlite3.connect(tmp_path / "test.db")
+    # an old price, as if the watcher had been running for years
+    conn.execute("INSERT INTO price_history VALUES (40, 19990, '2000-01-01T00:00:00+00:00')")
+    conn.commit()
+    conn.close()
+    assert len(c.get("/history", query_string={"appid": 40}).get_json()["prices"]) == 2
+    assert len(c.get("/history", query_string={"appid": 40, "days": 30}).get_json()["prices"]) == 1
+    assert c.get("/history", query_string={"appid": 40, "days": 0}).status_code == 400
+    assert c.get("/history", query_string={"appid": 40, "days": "week"}).status_code == 400
 
 
 def test_the_watchlist_in_the_repo_loads():

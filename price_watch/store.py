@@ -106,7 +106,9 @@ def deal(name: str, image: str, price: Price, old_final: int, lowest: bool,
     }
 
 
-def history(conn: sqlite3.Connection, appid: int) -> list[dict]:
+def history(conn: sqlite3.Connection, appid: int, since: str = "") -> list[dict]:
+    """Every price seen, oldest first; `since` (an ISO time) keeps only the recent ones."""
     rows = conn.execute(
-        "SELECT final AS price, seen_at FROM price_history WHERE appid = ? ORDER BY seen_at, rowid", (appid,))
+        "SELECT final AS price, seen_at FROM price_history WHERE appid = ? AND seen_at >= ? "
+        "ORDER BY seen_at, rowid", (appid, since))
     return [dict(r) for r in rows]
